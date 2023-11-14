@@ -1,0 +1,4 @@
+D:\Проекты VS\Серверы\Client\Debug\Client.exe
+D:\Проекты VS\Серверы\Client\Debug\Client.pdb
+C:\Users\Fix\Desktop\Серверы\Serv_4\Client\Debug\Client.exe
+C:\Users\Fix\Desktop\Серверы\Serv_4\Client\Debug\Client.pdb
