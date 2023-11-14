@@ -1,0 +1,423 @@
+#define FILENAME "input.txt"
+#include<fstream>
+#include<iostream>
+#include<vector>
+#include <iomanip>
+//std::setprecision(14)
+
+void print_matrix(double** matrix, int n, int m) {
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < m; j++)
+			std::cout << std::setprecision(6) << matrix[i][j] << " ";
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+double** aMultiplyB(double** a, double** b, int n, int m) {
+	double** result = new double*[n];
+	for (int i = 0; i < n; i++)
+		result[i] = new double[m];
+
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < m; j++)
+			result[i][j] = 0;
+
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < m; j++)
+			for (int k = 0; k < n; k++)
+				result[i][j] += a[i][k] * b[k][j];
+
+	return result;
+}
+
+double** toTriangleForm(double** a, int n, int m, int& swap, std::vector<double>& changes) {
+
+	swap = 0;
+
+	double** temp = new double*[n];
+	for (int i = 0; i < n; i++)
+		temp[i] = new double[m];
+
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < m; j++)
+			temp[i][j] = a[i][j];
+
+	for (int j = 0; j < m; j++)
+	{
+		int notNull_i = j;
+		while (notNull_i < n && temp[notNull_i][j] == 0)
+			notNull_i++;
+		if (notNull_i == n)
+		{
+			//std::cout << "Матрица вырождена" << std::endl;
+			return NULL;
+		}
+
+		for (int p = notNull_i + 1; p < n; p++)
+		{
+			if (temp[p][j] != 0)
+			{
+				int tmp = temp[p][j];
+				for (int k = 0; k < m; k++)
+				{
+					temp[p][k] *= temp[notNull_i][j];
+					temp[p][k] -= temp[notNull_i][k] * tmp;
+				}
+				changes.push_back(temp[notNull_i][j]);
+			}
+		}
+
+		if (notNull_i > j)
+		{
+			for (int k = 0; k < m; k++)
+				std::swap(temp[notNull_i][k], temp[j][k]);
+			swap++;
+		}
+	}
+
+	return temp;
+}
+
+double getDet(double** a, int n, int m) {
+	int swap = 0;
+	std::vector<double> changes;
+	double** temp = toTriangleForm(a, n, m, swap, changes);
+	if (temp == NULL) return 0;
+	double det = 1;
+
+	for (int i = 0; i < n; i++)
+		det *= temp[i][i];
+	if (swap % 2 == 1)
+		det = -det;
+
+	double summaryChanges = 1;
+	for (int i = 0; i < changes.size(); i++)
+		summaryChanges *= changes[i];
+	if (summaryChanges != 0)
+		det /= summaryChanges;
+
+	for (int i = 0; i < n; i++)
+		delete temp[i];
+	delete temp;
+
+	return det;
+}
+
+double** input_matrix(const char* filename, int& n, int& m, double*& b) {
+	std::ifstream fin(filename);
+	if (!fin.is_open()) return NULL;
+
+	fin >> n >> m;
+
+	double** matrix = new double*[n];
+	for (int i = 0; i < n; i++)
+		matrix[i] = new double[m];
+
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < m; j++)
+			fin >> matrix[i][j];
+
+	if (!fin.eof())
+	{
+		b = new double[n];
+
+		for (int i = 0; i < n; i++)
+			fin >> b[i];
+	}
+
+	return matrix;
+}
+
+bool LU_decompose(double** matrix, double** l_matrix, double** u_matrix, int n, int m) {
+	int i = n - 1;//проверка главных миноров матрицы
+	while (i)
+	{
+		if (getDet(matrix, n - i, m - i) == 0) {
+			//минор вырожден
+			std::cout << "LU - разложения не существует" << std::endl;
+			return false;
+		}
+		i--;
+	}
+
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < m; j++)
+		{
+			l_matrix[i][j] = 0;
+			u_matrix[i][j] = 0;
+		}
+		l_matrix[i][i] = 1;
+	}
+
+	double tmp_sum;
+
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < m; j++)
+		{
+			tmp_sum = 0;
+			if (i <= j)//вычисление U[i][j]
+			{
+				for (int k = 0; k < i; k++)
+					tmp_sum += l_matrix[i][k] * u_matrix[k][j];
+
+				u_matrix[i][j] = matrix[i][j] - tmp_sum;
+			}
+			else//вычисление L[i][j]
+			{
+				for (int k = 0; k < j; k++)
+					tmp_sum += l_matrix[i][k] * u_matrix[k][j];
+
+				if (u_matrix[j][j] != 0)
+					l_matrix[i][j] = (matrix[i][j] - tmp_sum) / u_matrix[j][j];
+			}
+		}
+
+	}
+
+	return true;
+}
+
+double* LU_SLAU(double** l_matrix, double** u_matrix, int n, int m, double* b) {
+	double* y = new double[n];
+	double* x = new double[n];
+
+	double tmp_sum;
+
+	if (b == NULL) return NULL;
+
+	for (int i = 0; i < n; i++)//y
+	{
+		tmp_sum = 0;
+		for (int j = 0; j < i; j++) {
+			tmp_sum += l_matrix[i][j] * y[j];
+		}
+
+		y[i] = b[i] - tmp_sum;
+	}
+
+	for (int i = n - 1; i >= 0; i--)//x
+	{
+		tmp_sum = 0;
+		for (int j = n - 1; j > i; j--) {
+			tmp_sum += u_matrix[i][j] * x[j];
+		}
+
+		x[i] = (y[i] - tmp_sum) / u_matrix[i][i];
+	}
+
+	return x;
+}
+
+double** getInverseMatrixLU(double** l_matrix, double** u_matrix, int n, int m) {
+
+	double** inverseMatrix_l = new double*[n];
+	double** inverseMatrix_u = new double*[n];
+
+	for (int i = 0; i < n; i++)
+	{
+		inverseMatrix_l[i] = new double[m];
+		inverseMatrix_u[i] = new double[m];
+	}
+
+	//копия l_matrix
+	double** temp_l = new double*[n];
+
+	for (int i = 0; i < n; i++)
+		temp_l[i] = new double[m];
+
+	//копирую l_matrix
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < m; j++)
+			temp_l[i][j] = l_matrix[i][j];
+
+	//копия u_matrix
+	double** temp_u = new double*[n];
+
+	for (int i = 0; i < n; i++)
+		temp_u[i] = new double[m];
+
+	//копирую u_matrix
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < m; j++)
+			temp_u[i][j] = u_matrix[i][j];
+
+	//делаю единичные матрицы
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < m; j++)
+			if (i == j) {
+				inverseMatrix_l[i][j] = 1;
+				inverseMatrix_u[i][j] = 1;
+			}
+			else {
+				inverseMatrix_l[i][j] = 0;
+				inverseMatrix_u[i][j] = 0;
+			}
+
+	//inverseMatrix_l
+	for (int j = 0; j < m; j++)
+	{
+		int notNull_i = j;//Находим первый ненулевой элемент столбца
+		while (notNull_i < n && temp_l[notNull_i][j] == 0)
+			notNull_i++;
+
+		for (int p = notNull_i + 1; p < n; p++)//обнуляем все элементы под notNull_i элементом
+		{
+			if (temp_l[p][j] != 0)
+			{
+				double tmp = temp_l[p][j];
+				for (int k = 0; k < m; k++)
+				{
+					temp_l[p][k] *= temp_l[notNull_i][j];
+					temp_l[p][k] -= temp_l[notNull_i][k] * tmp;
+					inverseMatrix_l[p][k] *= temp_l[notNull_i][j];
+					inverseMatrix_l[p][k] -= inverseMatrix_l[notNull_i][k] * tmp;
+				}
+			}
+		}
+
+		if (notNull_i > j)//поднимаем строку с ненулевым элементом на нужное(j) место
+		{
+			for (int k = 0; k < m; k++)
+			{
+				std::swap(temp_l[notNull_i][k], temp_l[j][k]);
+				std::swap(inverseMatrix_l[notNull_i][k], inverseMatrix_l[j][k]);
+			}
+		}
+	}
+
+	//inverseMatrix_u
+	for (int j = m - 1; j >= 0; j--)
+	{
+		int notNull_i = j;//Находим первый ненулевой элемент столбца
+		while (notNull_i > n && temp_u[notNull_i][j] == 0)
+			notNull_i--;
+
+		for (int p = notNull_i - 1; p >= 0; p--)//обнуляем все элементы над notNull_i элементом
+		{
+			if (temp_u[p][j] != 0)
+			{
+				double tmp = temp_u[p][j];
+				for (int k = 0; k < m; k++)
+				{
+					temp_u[p][k] *= temp_u[notNull_i][j];
+					temp_u[p][k] -= temp_u[notNull_i][k] * tmp;
+					inverseMatrix_u[p][k] *= temp_u[notNull_i][j];
+					inverseMatrix_u[p][k] -= inverseMatrix_u[notNull_i][k] * tmp;
+				}
+			}
+		}
+
+		if (notNull_i < j)//опускаем строку с ненулевым элементом на нужное(j) место
+		{
+			for (int k = 0; k < m; k++)
+			{
+				std::swap(temp_u[notNull_i][k], temp_u[j][k]);
+				std::swap(inverseMatrix_u[notNull_i][k], inverseMatrix_u[j][k]);
+			}
+		}
+	}
+
+	for (int i = 0; i < n; i++)
+	{
+		double tmp = temp_u[i][i];
+		if (tmp != 0)
+			for (int j = 0; j < m; j++)
+			{
+				temp_u[i][j] /= tmp;
+				inverseMatrix_u[i][j] /= tmp;
+			}
+	}
+
+	double** inverseMatrix = aMultiplyB(inverseMatrix_u, inverseMatrix_l, n, m);
+
+	return inverseMatrix;
+}
+
+void main() {
+	setlocale(LC_ALL, "rus");
+
+	int n = 0, m = 0;
+	double* b = NULL;
+	double** matrix = input_matrix(FILENAME, n, m, b);
+
+	double** l_matrix = new double*[n];
+	for (int i = 0; i < n; i++)
+		l_matrix[i] = new double[m];
+
+	double** u_matrix = new double*[n];
+	for (int i = 0; i < n; i++)
+		u_matrix[i] = new double[m];
+
+	std::cout << "A =" << std::endl;
+	print_matrix(matrix, n, m);
+
+	bool isDecomposed = LU_decompose(matrix, l_matrix, u_matrix, n, m);
+
+	if (isDecomposed && l_matrix != NULL && u_matrix != NULL)
+	{
+		std::cout << "L =" << std::endl;
+		print_matrix(l_matrix, n, m);
+
+		std::cout << "U =" << std::endl;
+		print_matrix(u_matrix, n, m);
+
+		double** newA = aMultiplyB(l_matrix, u_matrix, n, m);
+
+		std::cout << "new A =" << std::endl;
+		print_matrix(newA, n, m);
+	}
+
+	while (true) {
+		std::cout << std::endl;
+		std::cout << "1 - Det" << std::endl;
+		std::cout << "2 - СЛАУ" << std::endl;
+		std::cout << "3 - Обратная матрица" << std::endl;
+		std::cout << "0 - Выход" << std::endl;
+
+		int choise = 0;
+
+		std::cin >> choise;
+
+		switch (choise) {
+		case 0:return; break;//выход
+
+		//Det
+		case 1: {
+			double det = 1;
+
+			for (int i = 0; i < n; i++)
+				det *= u_matrix[i][i];
+
+			std::cout << std::endl;
+			std::cout << "Det = " << det << std::endl;
+		} break;
+
+			//СЛАУ
+		case 2: {
+			double* x;
+
+			x = LU_SLAU(l_matrix, u_matrix, n, m, b);
+
+			std::cout << std::endl;
+			if (x != NULL)
+				for (int i = 0; i < n; i++)
+					std::cout << "x" << i << " = " << x[i] << std::endl;
+		} break;
+
+			//Обратная матрица
+		case 3: {
+			double** inverseMatrix = getInverseMatrixLU(l_matrix, u_matrix, n, m);
+
+			std::cout << std::endl;
+			std::cout << "A^-1 = " << std::endl;
+			print_matrix(inverseMatrix, n, m);
+		}break;
+		}
+	}
+
+	//system("pause");
+}

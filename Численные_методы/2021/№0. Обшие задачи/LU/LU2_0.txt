@@ -1,0 +1,221 @@
+#include <iostream>
+#include <fstream>
+using namespace std;
+
+bool swap(int n, double** matrix, int stroka, int stolbec) {
+	bool flag = 0; int number;
+	double t;
+	for (int i = stroka; i < n - 1; i++)
+		if (matrix[i + 1][stolbec] != 0) {
+			flag = 1;
+			number = i + 1;
+		}
+	if (flag)
+		for (int i = stolbec; i < n; i++) {
+			t = matrix[stroka][i];
+			matrix[stroka][i] = matrix[number][i];
+			matrix[number][i] = t;
+		}
+	return flag;
+}
+
+void proisv(double** A, double** B,
+	double**& R, int n) {
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++)
+			for (int k = 0; k < n; k++)
+				R[i][j] += A[i][k] * B[k][j];
+}
+
+void show(double** A, int n) {
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			cout << "\t" << A[i][j] << "\t";
+		}
+		cout << endl;
+	}
+}
+
+double* resschenie(double** l, double** u, double* b, int n) {
+	double* x, * y;
+	x = new double[n];
+	y = new double[n];
+
+	for (int i = 0; i < n; i++) {
+		x[i] = 0;
+		y[i] = 0;
+	}
+
+	for (int i = 0; i < n; i++) {
+		double sum = 0;
+		for (int j = 0; j <= i - 1; j++)
+			sum += l[i][j] * y[j];
+		y[i] = b[i] - sum;
+	}
+
+	for (int i = n - 1; i >= 0; i--) {
+		double sum = 0;
+		for (int j = i + 1; j <= n - 1; j++)
+			sum += u[i][j] * x[j];
+		x[i] = (y[i] - sum) / u[i][i];
+	}
+	return x;
+}
+
+double minor(double** U, int n) {
+	double det = 1;
+	for (int k = 0; k < n; k++) {
+		bool f;
+		if (U[k][k] != 0) {
+			for (int i = k; i < n - 1; i++) {
+				double t;
+				t = U[i + 1][k];
+				for (int j = 0; j < n; j++)
+					U[i + 1][j] -= U[k][j] * (t / U[k][k]);
+			}
+		}
+		else {
+			f = swap(n, U, k, k);
+			if (f) {
+				for (int i = k; i < n - 1; i++) {
+					double t;
+					t = U[i + 1][i];
+					for (int j = i; j < n; j++)
+						U[i + 1][j] -= U[i][j] * (t / U[k][k]);
+				}
+			}
+			else {
+				det = 0;
+				break;
+			}
+
+		}
+
+	}
+
+	for (int i = 0; i < n; i++)
+		det *= U[i][i];
+	return det;
+}
+
+void LU(double** a, double**& l,
+	double**& u, int n, bool& susch) {
+	double** m = new double* [n - 1];
+	for (int i = 0; i < n - 1; i++)
+		m[i] = new double[n - 1];
+	//проверяем главные миноры
+	bool f = 1;
+	for (int k = 0; k < n; k++) {
+		int i2 = 0, j2 = 0;
+		for (int i = 0; i < n; i++) {
+			for (int j = 0; j < n; j++) {
+				if (i != k && j != k) {
+					m[i2][j2] = a[i][j];
+					j2++;
+				}
+			}
+			if (i != k)
+				i2++;
+			j2 = 0;
+		}
+
+		if (minor(m, (n - 1)) == 0) {
+			f = 0;
+		}
+		susch = f;
+	}
+	//вычисляем по формула L и U матрицы
+	cout << endl;
+	if (f)
+		cout << "Существует разложение." << endl;
+	cout << endl;
+	for (int i = 0; i < n; i++) {
+		// Верхняя Треугольная
+		for (int j = i; j < n; j++) {
+			// Суммирование L (i, j) * U (j, k)
+			double sum = 0;
+			for (int k = 0; k < i; k++)
+				sum += (l[i][k] * u[k][j]);
+			// Оцениваем U (i, k)
+			u[i][j] = a[i][j] - sum;
+		}
+		// Нижняя Треугольная
+		for (int k = i; k < n; k++) {
+			if (i == k)
+				l[i][i] = 1; // Диагональ как 1
+			else {
+				// Суммирование L (k, j) * U (j, i)
+				double sum = 0;
+				for (int j = 0; j < i; j++)
+					sum += (l[k][j] * u[j][i]);
+				// Оцениваем L (k, i)
+				l[k][i] = (a[k][i] - sum) / u[i][i];
+
+			}
+
+		}
+
+	}
+}
+
+int main() {
+	setlocale(LC_ALL, "ru");
+	int i, j, N;
+	double** A, ** L, ** U, ** R;
+	double* b;
+	bool susch = 1;
+	fstream f;
+	f.open("1.txt");
+	f >> N;
+	if (N < 0)
+		N *= -1;
+	A = new double* [N];
+	L = new double* [N];
+	U = new double* [N];
+	R = new double* [N];
+	b = new double[N];
+	for (i = 0; i < N; i++) {
+		A[i] = new double[N];
+		L[i] = new double[N];
+		U[i] = new double[N];
+		R[i] = new double[N];
+	}
+	for (i = 0; i < N; i++)
+		for (j = 0; j < N; j++) {
+			f >> A[i][j];
+			L[i][j] = 0;
+			U[i][j] = 0;
+			R[i][j] = 0;
+		}
+	for (int i = 0; i < N; i++)
+		f >> b[i];
+	f.close();
+	LU(A, L, U, N, susch);
+	double det = 1;
+	for (int i = 0; i < N; i++)
+		det *= U[i][i];
+	cout << "Определитель матрицы: " << det << endl;
+	if (susch) {
+		cout << "Матрица U:" << endl;
+		show(U, N);
+		cout << "Матрица L:" << endl;
+		show(L, N);
+		proisv(L, U, R, N);
+		cout << "Проверка L*U:" << endl;
+		show(R, N);
+		if (det != 0) {
+			double* x = new double[N];
+			x = resschenie(L, U, b, N);
+			cout << "Решение СЛАУ:" << endl;
+			for (int i = 0; i < N; i++)
+				cout << "х[" << i + 1 << "]=" << x[i] << endl;
+		}
+		else {
+			cout << endl;
+			cout << "Решений нет." << endl;
+		}
+	}
+	else
+		cout << "Нельзя сделать LU разложение." << endl;
+	return 0;
+}

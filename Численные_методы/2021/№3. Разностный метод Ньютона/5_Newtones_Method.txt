@@ -1,0 +1,187 @@
+﻿#include<iostream>
+#include<functional> // используем ссылки на функции для передачи в параметр чтобы не писать кучу одинаковых функций
+
+#define EPS 0.000001
+
+// Метод Ньютона решения систем нелинейных уравнений. Если не сходится, лучше попробовать другое начальное приближение.
+
+void printMatrix(double** arr, int n, int m) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            std::cout << arr[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+//примеры систем 3x3 //1// //2// //3//
+double f1(double x1, double x2, double x3)
+{
+    //return 3*x1*x2/(x1+x2)-2;//1// x1=1,x2=2,x3=3
+    //return x1*x1-2*x1-x2+1 + x3*x3;//2// x1=1.8,x2=2.02,x3=1.17
+    return x1 * x1 - x2 * x2 + x3;//3// x1=-1.4,x2=-0.6,x3=-1.6
+}
+
+double f2(double x1, double x2, double x3)
+{
+    //return 4*x1*x3/(x1+x3)-3;//1
+    //return x1*x1+x2*x2+2*x1-6*x2 + x3;//2//
+    return x1 * x1 * x1 - x2 * x2 + x3 * x3 * x3 * x3 - 4;//3//
+}
+
+double f3(double x1, double x2, double x3)
+{
+    //return 5*x2*x3/(x2+x3)-6;//1//
+    //return -x1*x1 + x2*x2 + x3 -2;//2//
+    return x1 + x2 * x2 * x2 - x3;//3//
+}
+
+std::function<double(double, double, double)> functions[3] = { f1, f2, f3 };
+
+double diff(std::function<double(double, double, double)> func, int numX, double x10, double x20, double x30) {
+    double dx = 0.000001;
+
+    if (numX == 1)
+        return (func(x10 + dx, x20, x30) - func(x10, x20, x30)) / dx;
+    if (numX == 2)
+        return (func(x10, x20 + dx, x30) - func(x10, x20, x30)) / dx;
+    if (numX == 3)
+        return (func(x10, x20, x30 + dx) - func(x10, x20, x30)) / dx;
+    else return 1;
+}
+
+bool toOneFormDual(double** temp, double** inverseMatrix, int n, int m) {
+    for (int j = 0; j < m; j++)
+    {
+        int notNull_i = j; //Находим первый ненулевой элемент столбца
+        while (notNull_i < n && temp[notNull_i][j] == 0)
+            notNull_i++;
+
+        if (notNull_i == n)
+        {
+            return false;
+        }
+
+        for (int p = 0; p < n; p++) //обнуляем все элементы под notNull_i элементом
+        {
+            if (temp[p][j] != 0 && p != notNull_i)
+            {
+                double tmp = temp[p][j];
+                for (int k = 0; k < m; k++)
+                {
+                    temp[p][k] *= temp[notNull_i][j];
+                    temp[p][k] -= temp[notNull_i][k] * tmp;
+                    inverseMatrix[p][k] *= temp[notNull_i][j];
+                    inverseMatrix[p][k] -= inverseMatrix[notNull_i][k] * tmp;
+                }
+            }
+        }
+
+        if (notNull_i > j) //поднимаем строку с ненулевым элементом на нужное(j) место
+        {
+            for (int k = 0; k < m; k++)
+            {
+                std::swap(temp[notNull_i][k], temp[j][k]);
+                std::swap(inverseMatrix[notNull_i][k], inverseMatrix[j][k]);
+            }
+        }
+    }
+    return true;
+}
+
+double** getInverseMatrix(double** a, int n, int m) {
+    double** inverseMatrix = new double* [n];
+
+    for (int i = 0; i < n; i++)
+        inverseMatrix[i] = new double[m];
+
+    double** temp = new double* [n];
+
+    for (int i = 0; i < n; i++)
+        temp[i] = new double[m];
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            temp[i][j] = a[i][j];
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            if (i == j) inverseMatrix[i][j] = 1;
+            else inverseMatrix[i][j] = 0;
+
+    if (!toOneFormDual(temp, inverseMatrix, n, m)) return NULL;
+    for (int i = 0; i < n; i++)
+    {
+        double tmp = temp[i][i];
+        if (tmp != 0)
+            for (int j = 0; j < m; j++)
+            {
+                temp[i][j] /= tmp;
+                inverseMatrix[i][j] /= tmp;
+            }
+    }
+    return inverseMatrix;
+}
+
+double maxSub(double* x1, double* x2, int n) {
+    double max = abs(x1[0] - x2[0]);
+    for (int i = 1; i < n; i++) {
+        if (max < abs(x1[i] - x2[i])) max = abs(x1[i] - x2[i]);
+    }
+    return max;
+}
+
+void newtonMethod(double* x, double x10, double x20, double x30) {
+    double* xPred = new double[3];
+    //std::cout<<diff(functions[0], 1, 1, 1, 1);
+    x[0] = x10;
+    x[1] = x20;
+    x[2] = x30;
+    double** yakobi = new double* [3];
+    for (int i = 0; i < 3; i++)
+        yakobi[i] = new double[3];
+
+    double** inverseYakobi = NULL;
+    double tmpSum = 0;
+    do {
+        for (int i = 0; i < 3; i++) {
+            xPred[i] = x[i];
+            //std::cout<<x[i]<<" ";
+        }
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                yakobi[i][j] = diff(functions[i], j + 1, xPred[0], xPred[1], xPred[2]);
+                //std::cout<<yakobi[i][j]<<" ";
+            }
+        }
+        //printMatrix(yakobi, 3, 3);
+
+        inverseYakobi = getInverseMatrix(yakobi, 3, 3);
+        if (inverseYakobi == NULL) return;
+
+        //printMatrix(inverseYakobi, 3, 3);
+        for (int i = 0; i < 3; i++) {
+            tmpSum = 0;
+            for (int j = 0; j < 3; j++) {
+                tmpSum += inverseYakobi[i][j] * functions[j](xPred[0], xPred[1], xPred[2]);
+            }
+            x[i] = xPred[i] - tmpSum;
+        }
+    } while (maxSub(xPred, x, 3) > EPS);
+}
+
+int main() {
+    setlocale(LC_ALL, "rus");
+    double* x = new double[3];
+    double x10 = 0, x20 = 0, x30 = 0;
+    std::cout << "Start interpolation(x1, x2, x3): ";
+    std::cin >> x10 >> x20 >> x30;
+    newtonMethod(x, x10, x20, x30);
+
+    if (x != NULL)
+        for (int i = 0; i < 3; i++) {
+            std::cout << "x" << i + 1 << " = " << x[i] << std::endl;
+        }
+    return 0;
+}

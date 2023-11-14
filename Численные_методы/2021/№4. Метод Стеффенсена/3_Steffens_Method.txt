@@ -1,0 +1,62 @@
+﻿#include<iostream>
+#include<vector>
+
+const double EPS = 0.001;
+
+// Метод Стеффенсена является модификацией метода Ньютона решения нелинейных уравнений, просто немного другое нахождение производной в точке.
+// Промежуток можно и (-50;50) задавать, но конечно если корни в меньшем, то, по сути, незачем.
+
+double f(double x) {
+	return x * x * x - 2 * x * x - x + 1;//x1=-0.8, x2=0.55, x3=2.24
+	//return 17 * x * x * x * x + 3 * x * x - 2 * x - 11;//x1=-0.81, x2=0.88 (комплексные не ищем)
+	//return x * x + 15 * x - 4;//x1=-15.26, x2=0.26
+}
+
+std::vector<double> steffensMethod(double start, double end) {
+	std::vector<double> allX;
+
+	double dx = 0.01;
+	std::vector<double> dots;//точки, в окрестности которых есть корень
+	for (double i = start, f1 = 0, f2 = 0; i <= end - dx; i += dx) {
+		f1 = f(i);
+		f2 = f(i + dx);
+		if (f1 * f2 < 0) dots.push_back(i + dx / 2);
+	}
+
+	//проходим по этим точкам и к каждой применяем итерационный метод, который должен уточнить корень
+	for (std::vector<double>::iterator iter = dots.begin(); iter != dots.end(); ++iter) {
+
+		int i = 0;
+		double func = f(*iter);
+		double x = (*iter) - func * func / (f(*iter + func) - func);
+		double x_prev = x;
+		do {
+			x_prev = x;
+			func = f(x_prev);
+			x = x_prev - func * func / (f(x_prev + func) - func); //основная формула метода Стеффенсена
+
+			i++;
+		} while (abs(x - x_prev) > EPS && i < 1000);
+
+		if (i < 1000) allX.push_back(x); //складываем все корни
+	}
+
+	return allX;
+}
+
+int main(int argc, char* argv) {
+	setlocale(LC_ALL, "rus");
+	double a = 0, b = 0;
+
+	std::cout << "Введите отрезок (a, b): ";
+	std::cin >> a >> b;
+
+	std::vector<double> allX = steffensMethod(a, b);
+	
+	int i = 1;
+	for (std::vector<double>::iterator iter = allX.begin(); iter != allX.end(); ++iter, i++) {
+		std::cout << "x" << i << " = " << *iter << std::endl;
+	}
+
+	return 0;
+}

@@ -1,0 +1,175 @@
+﻿#include <fstream>
+#include <iostream>
+
+// Метод Зейделя для решения СЛАУ.
+
+double** create_matrix(int n) {
+	double** A = new double* [n];
+	for (int i = 0; i < n; ++i) {
+		A[i] = new double[n];
+	}
+
+	return A;
+}
+
+void input(double**& A, double*& b, int& n, double& eps) {
+	std::ifstream fin("input.txt");
+	fin >> n; //размерность
+
+	A = create_matrix(n);
+	b = new double[n];
+
+	//матрица
+	for (int i = 0; i < n; ++i) {
+		for (int j = 0; j < n; ++j) {
+			fin >> A[i][j];
+		}
+		fin >> b[i];
+	}
+
+	fin >> eps; //прогрешность
+
+	fin.close();
+}
+
+void output(double** A, double* b, int& n) {
+	for (int i = 0; i < n; ++i) {
+		for (int j = 0; j < n; ++j) {
+			std::cout << A[i][j] << "  ";
+		}
+		std::cout << "|  " << b[i] << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+void outputX(double* x, int n) {
+	for (int i = 0; i < n; ++i) {
+		std::cout << "x" << i << " = " << x[i] << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+double* method_Seidel(double** A, double* b, double* x, int n, double eps) {
+
+	x = new double[n];   //x(k)
+	double* tmpX = new double[n];   //x(k+1)
+	for (int i = 0; i < n; ++i) {
+		x[i] = 0;                   // начальное приближение x0 = (0...0)
+		tmpX[i] = 0;
+	}
+
+	double** B = create_matrix(n);
+	double* c = new double[n];
+	for (int i = 0; i < n; ++i) {     // вычисляем матрицу B (x = Bx + c)
+		for (int j = 0; j < n; ++j) {
+			if (i != j) {
+				if (A[i][i] == 0) {
+					std::cout << "Диагональный элемент 0" << std::endl;
+					return NULL;
+				}
+				B[i][j] = -A[i][j] / A[i][i];
+			}
+		}
+		B[i][i] = 0;
+		c[i] = b[i] / A[i][i];
+	}
+
+	double prednorm = 1000;  // предыдущее расстояние между x(k) и x(k+1)
+	double norm = 0;   // расстоние между x(k) и x(k+1)   // если prednorm < norm, то метод расходится
+	do {
+		for (int i = 0; i < n; ++i) {     // вычисляем x(k+1)
+			double sum = 0;
+			for (int j = 0; j < n; ++j) {
+				sum += (B[i][j] * tmpX[j]);
+			}
+			tmpX[i] = c[i] + sum;
+		}
+
+		norm = 0;   // находим расстояние
+		for (int k = 0; k < n; ++k) {
+			norm += (tmpX[k] - x[k]) * (tmpX[k] - x[k]);
+			x[k] = tmpX[k];
+		}
+		/*outputX(x, n);
+		std::cout << std::endl << norm << std::endl;*/
+
+		if (prednorm < norm) {
+			std::cout << "Метод расходится" << std::endl;
+			return NULL;
+		}
+		prednorm = norm;
+
+	} while (sqrt(norm) > eps);   // если расстояние между x(k) и x(k+1) > eps, продолжаем
+
+	return x;
+}
+
+double error_func(double** A, double* b, double* x, int n) {
+
+	double* b1 = new double[n];
+	for (int i = 0; i < n; ++i)
+		b1[i] = 0;
+
+	for (int i = 0; i < n; ++i) {
+		for (int j = 0; j < n; ++j) {
+			b1[i] += A[i][j] * x[j];
+		}
+	}
+
+	double error = 0;
+	for (int i = 0; i < n; ++i) {
+		error += (b[i] - b1[i]) * (b[i] - b1[i]);
+	}
+	error = sqrt(error);
+	return error;
+}
+
+int main() {
+
+	setlocale(LC_ALL, "rus");
+
+	int n = 0;
+	double eps = 0;
+	double** A = NULL;
+	double* b = NULL;
+	input(A, b, n, eps);
+
+	std::cout << "Исходная матрица: " << std::endl;
+	output(A, b, n);
+
+	//std::cout << "Желаемая точность: " << eps << std::endl << std::endl;
+
+	double* x = NULL;
+	x = method_Seidel(A, b, x, n, eps);
+	if (x != NULL) {
+		std::cout << "Решение, полученное методом Зейделя: " << std::endl;
+		outputX(x, n);
+
+		double e = 0;
+		e = error_func(A, b, x, n);
+		std::cout << "Погрешность: " << e << std::endl;
+	}
+
+}
+//
+//
+//
+//примеры
+//3
+//1 2 3 5
+//0 10 1 2
+//3 4 10 3
+//0.00001
+//
+//4
+//209 12 21 9 217
+//12 212 15 25 274.6
+//21 15 198 13 287.6
+//9 25 13 321 497.2
+//0.00001
+//
+//3
+//10 1 1 12
+//2 10 1 13
+//2 2 1 14
+//0.00001

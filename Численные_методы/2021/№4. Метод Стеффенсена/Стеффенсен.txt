@@ -1,0 +1,33 @@
+#include <iostream>
+#include <math.h>
+using namespace std;
+
+double f(double x) {
+	return 9.2 * x * x * x + 3.3 * x * x + 4 * x - 1; //задаем уравнение
+}
+
+double es(double x, double eps) { //с помощью метода Эйтнена-Стеффенсона считаем приближения
+	double x0, x1, x2, d;
+	do {
+		x0 = x;
+		x1 = f(x0);
+		x2 = f(x1);
+		d = x0 - 2 * x1 + x2;
+		if (d != 0)
+			x = (x0 * x2 - x1 * x1) / d;
+		else return x;
+	}
+	while (fabs(x - x0) > eps); //условие окончания подсчета 
+	return x;
+}
+
+int main() {
+	setlocale(LC_ALL, "rus");
+	double x, eps;
+	cout << "Введите х: ";
+	cin >> x;
+	cout << "Введите eps: ";
+	cin >> eps;
+	cout << es(x, eps);
+	return 0;
+}
