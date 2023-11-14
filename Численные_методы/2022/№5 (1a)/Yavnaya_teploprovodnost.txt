@@ -1,0 +1,101 @@
+﻿#include "stdafx.h"
+#include <iostream>
+#include <fstream>
+#include <locale>
+#include <iomanip>
+const double PI = acos(-1.0);
+using namespace std;
+void input(double& a1, double& b1, double& a2, double& b2, double& tau, double& h) {
+	ifstream f;
+	f.open("input.txt");
+	f >> a1;
+	f >> b1;
+	f >> a2;
+	f >> b2;
+	f >> tau; // шаг по t
+	f >> h; //шаг по x
+
+			/*f >> y30;*/
+			//cout << "Промежуток [" << a << ", " << b << "] " << "c шагом " << h << " и с начальным значением функции " << y10 << " " << y20 << " " << endl;
+}
+
+void output(double**& u, int n, int m) {
+	ofstream f1;
+	f1.open("output.txt");
+	for (int i = 0; i < m; i++) {
+		for (int j = 0; j < n; j++) {
+			f1 << u[i][j] << '\t';
+		}
+		f1 << endl;
+	}
+	f1.close();
+	for (int i = 0; i < m; i++) {
+		for (int j = 0; j < n; j++) {
+			cout << setw(10) << u[i][j] << setw(10);
+		}
+		cout << endl << endl;
+	}
+}
+
+double u0(double x) {
+	return 1;
+}
+
+double mu1(double t) {
+	return 1;
+}
+
+double mu2(double t) {
+	return 1;
+}
+
+double func(double x, double t) {
+	/*return x + t ; */
+	return 2 * t - 2;;
+}
+
+int main() {
+	setlocale(LC_ALL, "rus");
+	double a1, a2, b1, b2, tau, h;
+	input(a1, b1, a2, b2, tau, h);
+	double n = (b1 - a1) / h + 1; //Кол - во шагов по x
+	double m = (b2 - a2) / tau + 1; //Кол - во шагов по t
+	double* x = new double[n];
+	double* t = new double[m];
+	double** u;
+	u = new double*[n];
+	for (int i = 0; i < n; i++)
+		u[i] = new double[m];
+	x[0] = 0;
+	t[0] = 0;
+	for (int i = 0; i < n - 1; i++) {
+		x[i + 1] = x[i] + h;
+	}
+
+	for (int i = 0; i < n - 1; i++) {
+		t[i + 1] = t[i] + tau;
+	}
+
+	for (int i = 0; i < n; i++) {
+		u[i][0] = u0(x[i]); //u0
+	}
+
+	for (int i = 0; i < n - 1; i++) {
+		u[0][i + 1] = mu1(t[i + 1]); //my 1
+	}
+
+	for (int i = 0; i < n - 1; i++) {
+		u[(int)n - 1][i + 1] = mu2(t[i + 1]); //my 2
+	}
+
+	for (int i = 0; i < m - 1; i++) {
+		for (int j = 1; j < n - 1; j++) {
+			u[j][i + 1] = u[j][i] + (tau * (((u[j + 1][i] - 2 * u[j][i] + u[j - 1][i]) / h * h) + func(x[j], t[i])));
+		}
+	}
+
+	output(u, n, m);
+	system("pause");
+	return 0;
+
+}

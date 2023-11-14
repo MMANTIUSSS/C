@@ -1,0 +1,111 @@
+
+#include <iostream>
+#include <fstream>
+#include <cmath>
+using namespace std;
+double eps = 10e-3;
+
+void input(int& k, double& a, double& b, double& h, double& y10, double& y20, double& y30) {
+	ifstream f;
+	f.open("input.txt");
+	f >> k;
+	f >> a;
+	f >> b;
+	f >> h;
+	f >> y10;
+	f >> y20;
+	f >> y30;
+}
+
+void output(double*& x, double*& y1, double*& y2, double*& y3, int N)
+{
+	ofstream f1;
+	f1.open("output.txt");
+	f1 << "x" << '\t' << "y1" << '\t' << "y2" << '\t' << "y3" << endl;
+	for (int i = 0; i < N; i++)
+		f1 << x[i] << '\t' << y1[i] << '\t' << y2[i] << '\t' << y3[i] << endl;
+	f1.close();
+	cout << endl << endl << "x" << '\t' << "y1" << '\t' << "y2" << '\t' << "y3" << endl;
+	for (int i = 0; i < N; i++)
+		cout << x[i] << '\t' << y1[i] << '\t' << y2[i] << '\t' << y3[i] << endl;
+}
+
+void output(double*& x, double*& y1, double*& y2, int N)
+{
+	ofstream f1;
+	f1.open("output.txt");
+	f1 << "x" << '\t' << "y1" << '\t' << "y2" << endl;
+	for (int i = 0; i < N; i++)
+		f1 << x[i] << '\t' << y1[i] << '\t' << y2[i] << endl;
+	f1.close();
+	cout << endl << endl << "x" << '\t' << "y1" << '\t' << "y2" << endl;
+	for (int i = 0; i < N; i++)
+		cout << x[i] << '\t' << y1[i] << '\t' << y2[i] << endl;
+}
+
+
+
+double F(int i, double x, double y1, double y2, double y3) {
+	if (i == 1) {
+		return y2 * y2 - 2 * x * y2 - 2 * y2 - y1;
+	}
+	if (i == 2) {
+		return 2 * y1 + (2 * x * x) + exp(2 * x - 2 * y2);
+	}
+	if (i == 3) {
+		return 0;
+	}
+}
+
+
+void Runge4(double*& x, double*& y1, double*& y2, double*& y3, double& a, double& b, double& h, double& n)
+{
+	x[0] = a;
+	double G1, G2, G3;
+	double y10, y20, y30;
+	double k1, k2, k3, k4, m1, m2, m3, m4, v1, v2, v3, v4;
+	for (int i = 1; i < n; i++) { 
+		x[i] = a + i * h;
+
+		k1 = h * F(1, x[i - 1], y1[i - 1], y2[i - 1], y3[i - 1]);
+		m1 = h * F(2, x[i - 1], y1[i - 1], y2[i - 1], y3[i - 1]);
+		v1 = h * F(3, x[i - 1], y1[i - 1], y2[i - 1], y3[i - 1]);
+
+		k2 = h * F(1, x[i - 1] + (h / 2), y1[i - 1] + (k1 / 2), y2[i - 1] + (m1 / 2), y3[i - 1] + (v1 / 2));
+		m2 = h * F(2, x[i - 1] + (h / 2), y1[i - 1] + (k1 / 2), y2[i - 1] + (m1 / 2), y3[i - 1] + (v1 / 2));
+		v2 = h * F(3, x[i - 1] + (h / 2), y1[i - 1] + (k1 / 2), y2[i - 1] + (m1 / 2), y3[i - 1] + (v1 / 2));
+
+		k3 = h * F(1, x[i - 1] + (h / 2), y1[i - 1] + (k2 / 2), y2[i - 1] + (m2 / 2), y3[i - 1] + (v2 / 2));
+		m3 = h * F(2, x[i - 1] + (h / 2), y1[i - 1] + (k2 / 2), y2[i - 1] + (m2 / 2), y3[i - 1] + (v2 / 2));
+		v3 = h * F(3, x[i - 1] + (h / 2), y1[i - 1] + (k2 / 2), y2[i - 1] + (m2 / 2), y3[i - 1] + (v2 / 2));
+
+		k4 = h * F(1, x[i - 1] + h, y1[i - 1] + k3, y2[i - 1] + m3, y3[i - 1] + v3);
+		m4 = h * F(2, x[i - 1] + h, y1[i - 1] + k3, y2[i - 1] + m3, y3[i - 1] + v3);
+		v4 = h * F(3, x[i - 1] + h, y1[i - 1] + k3, y2[i - 1] + m3, y3[i - 1] + v3);
+
+		y1[i] = y1[i - 1] + ((k1 + (2 * k2) + (2 * k3) + k4) / 6);
+		y2[i] = y2[i - 1] + ((m1 + (2 * m2) + (2 * m3) + m4) / 6);
+		y3[i] = y3[i - 1] + ((v1 + (2 * v2) + (2 * v3) + v4) / 6);
+
+	}
+}
+
+int main()
+{
+	setlocale(LC_ALL, "Russian");
+	double a, b, h, y10, y20, y30;
+	int k;
+	input(k, a, b, h, y10, y20, y30);
+	double n;
+	n = abs(b - a) / h + 1; //вычисление количества узлов
+	double* x = new double[n];
+	double* y1 = new double[n];
+	double* y2 = new double[n];
+	double* y3 = new double[n];
+	y1[0] = y10; y2[0] = y20; y3[0] = y30;
+	Runge4(x, y1, y2, y3, a, b, h, n);
+	if (k == 2) {
+		output(x, y1, y2, n);
+	}
+	if (k == 3) output(x, y1, y2, y3, n);
+}

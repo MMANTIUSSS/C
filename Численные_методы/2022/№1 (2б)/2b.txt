@@ -1,0 +1,122 @@
+#include <iostream>
+#include <fstream>
+using namespace std;
+double eps = 10e-7;
+void input(double**& A, int& N) {
+	ifstream f;
+	f.open("input.txt");
+	f >> N;
+	A = new double* [N];
+	for (int i = 0; i < N; i++)
+		A[i] = new double[N];
+	for (int i = 0; i < N; i++)
+	{
+		for (int j = 0; j < N; j++)
+			f >> A[i][j];
+	}
+	f.close();
+	cout << "Матрица (N*N) :" << endl;
+	for (int i = 0; i < N; i++)
+	{
+		for (int j = 0; j < N; j++)
+			cout << A[i][j] << " ";
+		cout << endl;
+	}
+}
+
+void output(double*& X, double lK, int& N)
+{
+	cout << endl << endl << "Собственный вектор: (";
+	for (int i = 0; i < N; i++)
+	{
+		if (abs(X[i]) > eps) cout << X[i];
+		else cout << 0;
+		if (i != N - 1)  cout << "; ";
+	}
+	cout << ")";
+	cout << endl;
+	cout << endl << "Собственное значение:" << lK;
+	cout << endl;
+}
+
+void exponentiation(int& n, double**& A) { //возведение матрицы в квадрат
+	double sum;
+	for (int j = 0; j < n; j++)
+	{
+		for (int i = 0; i < n; i++)
+		{
+			sum = 0;
+			for (int r = 0; r < n; r++)
+			{
+				sum += A[j][r] * A[r][i];
+			}
+			A[j][i] = sum;
+		}
+	}
+}
+
+int main()
+{
+	setlocale(LC_ALL, "Russian");
+	int n;
+	double** A;
+	input(A, n);
+	double* y0 = new double[n];
+	for (int i = 0; i < n; i++)
+		y0[i] = rand();
+	double* x0 = new double[n];
+	for (int i = 0; i < n; i++)
+		x0[i] = 0;
+	double s = 0;
+	double norma;
+	for (int i = 0; i < n; i++)
+		s += y0[i] * y0[i];
+	norma = sqrt(s);
+	for (int i = 0; i < n; i++)
+		x0[i] = y0[i] / norma;
+	double* x = new double[n];
+	double* xk = new double[n];
+	int k = 1;
+	double l, lK = 0, lk1;
+	int f;
+	exponentiation(n, A);
+	do
+	{
+		for (int i = 0; i < n; i++)
+		{
+			x[i] = 0;
+			for (int j = 0; j < n; j++)
+				x[i] += A[i][j] * x0[j];
+		}
+		s = 0;
+		for (int i = 0; i < n; i++)
+			s = s + x[i] * x[i];
+		norma = sqrt(s);
+
+
+		for (int i = 0; i < n; i++)
+			xk[i] = x[i] / norma;
+
+		f = 0;
+		l = 0;
+
+
+		for (int i = 0; i < n; i++)
+		{
+			if (abs(x0[i]) > eps)
+			{
+				f++;
+				l += x[i] / x0[i];
+			}
+		}
+
+		lk1 = lK;
+		if (f == 0) lK = 0;
+		else lK = l / f;
+		for (int i = 0; i < n; i++)
+			x0[i] = xk[i];
+		k++;
+	} while (abs(lK - lk1) > eps);
+
+	output(xk, lk1, n);
+}

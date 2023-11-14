@@ -1,0 +1,55 @@
+#include <iostream>
+#include <cmath>
+#include <fstream>
+using namespace std;
+void input(double& a, double& b, double& h, double& ynach, double& sigma, double& A) {
+    ifstream file;
+    file.open("input.txt");
+    file >> a;
+    file >> b;
+    file >> h;
+    file >> ynach;
+    file >> sigma;
+    file >> A;
+}
+
+
+void output(double*& x, double*& y, int N)
+{
+    ofstream file;
+    file.open("output.txt");
+    file << "x" << '\t' << "y" << endl;
+    for (int i = 0; i < N; i++)
+        file << x[i] << '\t' << y[i] << endl;
+    file.close();
+    cout << endl << endl << "x" << '\t' << "y" << endl;
+    for (int i = 0; i < N; i++)
+        cout << x[i] << '\t' << y[i] << endl;
+}
+
+double F(double x, double y) {
+    return (4 - x * y - x * x * y * y) / (x * x);
+}
+
+void RUNGE_KUTT(double*& x, double*& y, double& n, double &a,double h, double & sigma, double &A) { //a - начальная точка, h - шаг (тау в самарском гулине)
+    double k1, k2;
+    for (int i = 1; i < n; i++) { //сигма и a можно задавать различным образом. Лучше всего задавать сигма = 1, а = 0.5
+        x[i] = a + i * h;
+        y[i] = y[i - 1] + h * ((1-sigma)*F(x[i-1], y[i-1])+ sigma*F(x[i-1] + A*h, y[i-1] + A*h*F(x[i-1],y[i-1])));
+    }
+}
+
+int main() {
+    setlocale(LC_ALL, "Russian");
+    double a, b, h, ynach,sigma, A;
+    input(a, b, h, ynach, sigma, A);
+    double n;
+    n = abs(b - a) / h + 1; //вычисление количества узлов
+    double* x = new double[n];
+    double* y = new double[n];
+    y[0] = ynach;
+    x[0] = a;
+    y[0] = ynach;
+    RUNGE_KUTT(x, y, n, a, h, sigma,A);
+    output(x, y, n);
+}

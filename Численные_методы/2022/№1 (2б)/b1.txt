@@ -1,0 +1,172 @@
+// младшей собств. пары  {lambda(n); x(n)}
+#include <iostream>
+#include <fstream>
+using namespace std;
+double eps = 10e-6;
+void input(double**& A, int& N) {
+	ifstream f;
+	f.open("input.txt");
+	f >> N;
+	A = new double* [N];
+	for (int i = 0; i < N; i++)
+		A[i] = new double[N];
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++)
+			f >> A[i][j];
+	}
+	f.close();
+	cout << "Matrix:" << endl;
+	for (int i = 0; i < N; i++) {
+		for (int j = 0; j < N; j++)
+			cout << A[i][j] << " ";
+		cout << endl;
+	}
+}
+
+void output(double*& X, double lambdaM, int& N) {
+	ofstream f1;
+	f1.open("output.txt");
+	for (int i = 0; i < N; i++)
+		f1 << X[i] << " ";
+	f1 << endl << lambdaM;
+
+	cout << endl << endl << "Собственный вектор: " << endl;
+	for (int i = 0; i < N; i++)
+		cout << X[i] << " ";
+	cout << endl << "lambda(n): " << lambdaM << endl;
+}
+
+bool diagonalityCheck(double**& a, double& lambdaM, double*& xk, int& n) //проверка на диагональность и поиск минимального лямбда и собственного вектора 
+{
+	bool diagonal = true;
+	int vector=0;
+	double min = a[0][0];
+	double flag = a[0][1];
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++) {
+			if (a[i][j] != flag) 
+				if (i != j) {
+					diagonal = false; // диагональность
+					break;				
+			}
+			if (i == j && a[i][j] < min) { min = a[i][j]; vector = i; }
+		}
+	if (diagonal) {
+		lambdaM = min- flag;
+		if (flag != 0) {
+			xk[0] = -1;
+			xk[1] = 1;
+			for (int i = 2; i < n; i++)
+			{
+				xk[i] = 0;
+			}
+		}else xk[vector] = 1;
+		return true;
+	}
+	return false;
+}
+
+int main() {
+	setlocale(LC_ALL, "Russian");
+	int n;
+	double** A;
+	input(A, n);
+	double* y0 = new double[n]; //вектор случайный
+	for (int i = 0; i < n; i++)
+		y0[i] = rand();
+	double* x0 = new double[n]; //вектор случайный нормированный
+	for (int i = 0; i < n; i++)
+		x0[i] = 0;
+	double sum = 0;
+	double norm;
+	for (int i = 0; i < n; i++) //норма евклидова!
+		sum += y0[i] * y0[i];
+	norm = sqrt(sum);
+	for (int i = 0; i < n; i++)
+		x0[i] = y0[i] / norm;
+	double* x = new double[n]; //вектор текущий ненормированный
+	double* xk = new double[n]; //вектор текущий нормированный
+	for (int i = 0; i < n; i++)
+		xk[i] = 0;
+
+	int k = 1;
+	double lambda;
+	double lambdaM = 0; //произвольно выбираем лямбда нулевое
+	double lambdaMO;//старая лямбда
+	int s; // счётчик координат, знаменатель которых не обращается в 0
+	if (diagonalityCheck(A, lambdaM, xk, n)) { //проверяем диагональность
+		output(xk, lambdaM, n);
+	}
+	do {
+		for (int i = 0; i < n; i++) //шаг 2
+		{
+			x[i] = 0;
+			for (int j = 0; j < n; j++)
+				x[i] += A[i][j] * x0[j];
+		}
+		sum = 0;
+		for (int i = 0; i < n; i++)
+			sum = sum + x[i] * x[i];
+		norm = sqrt(sum);
+		for (int i = 0; i < n; i++) //шаг 3
+			xk[i] = x[i] / norm;
+		s = 0;
+		lambda = 0;
+		for (int i = 0; i < n; i++) {
+			if (abs(x0[i]) > eps) {
+				s++;
+				lambda += x[i] / x0[i]; //шаг 4
+			}
+		}
+		lambdaMO = lambdaM;
+		if (s == 0) lambdaM = 0;
+		else lambdaM = lambda / s;
+		for (int i = 0; i < n; i++)
+			x0[i] = xk[i];
+		k++;
+	} while (abs(lambdaM - lambdaMO) > eps);
+
+	double LM = lambdaM;
+	for (int i = 0; i < n; i++) //ищем наибольшее собственное число для матрицы A-lambdaM*E
+	{
+		A[i][i] -= LM;
+	}
+	for (int i = 0; i < n; i++)
+		y0[i] = rand();
+	sum = 0;
+	for (int i = 0; i < n; i++)
+		sum += y0[i] * y0[i];
+	norm = sqrt(sum);
+	for (int i = 0; i < n; i++)
+		x0[i] = y0[i] / norm;
+	s = 0;
+	do {
+		for (int i = 0; i < n; i++) //шаг 2
+		{
+			x[i] = 0;
+			for (int j = 0; j < n; j++)
+				x[i] += A[i][j] * x0[j];
+		}
+		sum = 0;
+		for (int i = 0; i < n; i++)
+			sum = sum + x[i] * x[i];
+		norm = sqrt(sum);
+		for (int i = 0; i < n; i++) //шаг 3
+			xk[i] = x[i] / norm;
+		s = 0;
+		lambda = 0;
+		for (int i = 0; i < n; i++) {
+			if (abs(x0[i]) > eps) {
+				s++;
+				lambda += x[i] / x0[i]; //шаг 4
+			}
+		}
+		lambdaMO = lambdaM;
+		if (s == 0) lambdaM = 0;
+		else lambdaM = lambda / s;
+		for (int i = 0; i < n; i++)
+			x0[i] = xk[i];
+		k++;
+	} while (abs(lambdaM - lambdaMO) > eps); //на выходе получаем число Л и собственный вектор, соответствующий наименьшему собственному значению
+	lambdaM = lambdaM + LM; // наименьшее по модулю лямбда = Л+lambdamax
+}
