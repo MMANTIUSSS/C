@@ -1,0 +1,44 @@
+#include <iostream>
+#include <fstream>
+#include "Header.h"
+using namespace std;
+
+void input(double**& x, double*& y, int q, int*& x2)
+{
+    int Q = 18, U = 20;
+    ifstream F("input.txt");
+    if (!F.is_open())
+    {
+        cout << "Error." << endl;
+    }
+    else {
+        for (int i = 0; i < U; i++)
+        {
+            for (int j = 0; j < Q; j++)
+            {
+                F >> x[i][j];
+            }
+            F >> y[i];
+        }
+    }
+    ifstream f1("input1.txt");
+    f1 >> q;
+    for (int i = 0; i < 18; i++)
+    {
+        f1 >> x2[i];
+        cout << x2[i] << "  ";
+    }
+    cout << endl;
+}
+
+int main() {
+    setlocale(LC_ALL, "ru");
+    double** x = new double* [20];
+    for (int i = 0; i < 20; i++)
+        x[i] = new double[18];
+    int* x2 = new int[18];
+    double* y = new double[20];
+    int q = 0;
+    input(x, y, q, x2);
+    study(x, y, q, x2);
+}

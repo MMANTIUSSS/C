@@ -1,0 +1,88 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+using namespace std;
+
+double sig(double xalpha) {
+	return 1 / (1 + exp(-xalpha));
+}
+
+int main() {
+	setlocale(LC_ALL, "Russian");
+	double xalpha[20][18], y[20], yalpha[25];
+	for (int i = 0; i < 20; i++)
+		y[i] = 0;
+	int Ques = 18, Us = 20;
+	ifstream f("input.txt");
+	if (f.is_open()) { //шаг1		
+		for (int i = 0; i < Us; i++) {
+			for (int j = 0; j < Ques; j++) {
+				f >> xalpha[i][j];
+			}
+			f >> yalpha[i];
+		}
+	}
+	else { 
+		cout << "Error." << endl;
+		return 0;
+	}
+	double w[20][18], err[20];
+
+	for (int i = 0; i < Us; i++) {
+		for (int j = 0; j < Ques; j++) {
+			w[i][j] = rand() % 3 - 1; //шаг 0
+		}
+		//cout << endl;
+	}
+	for (int i = 0; i < Us; i++) {
+		for (int j = 0; j < Ques; j++)
+			y[i] += xalpha[i][j] * w[i][j];
+
+		y[i] = sig(y[i]);
+	}
+	cout << endl;
+	double delta=1;
+	double eps = 10e-7;
+	for (int Era = 0; Era < 10000 || delta <eps; Era++) //условия окончания {
+		delta = 0;
+		for (int i = 0; i < Us; i++) {
+			for (int j = 0; j < Ques; j++)
+				y[i] += xalpha[i][j] * w[i][j];
+			y[i] = sig(y[i]);
+			err[i] = yalpha[i] - y[i]; //шаг2
+			delta += err[i];
+		}
+		for (int i = 0; i < Us; i++) { //шаг3
+			for (int j = 0; j < Ques; j++) {
+				w[i][j] += xalpha[i][j] * err[i];
+			}
+		}
+	}
+	cout << "Результат обучения:" << endl;
+	for (int i = 0; i < Us; i++) {
+		cout << y[i] << endl;
+	}
+	cout << "\n" << "Матрица весов:" << endl;
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 18; j++) {
+			cout << w[i][j] << "  ";
+		}
+		cout << endl;
+	}
+
+	cout << "Обучающий пример:" << endl;
+	int xTest[18], yTest = 0, q = 0;
+	ifstream f1("inputTest.txt");
+	f1 >> q;
+	for (int i = 0; i < 18; i++) {
+		f1 >> xTest[i];
+		cout << xTest[i] << "  ";
+	}
+	cout << endl;
+	int sum = 0;
+	for (int l = 0; l < 18; l++) {
+		sum += xTest[l] * w[q][l];
+	}
+	cout << '\n' << '\n' << "Ответ: " << sig(sum);
+
+}
