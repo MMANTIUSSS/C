@@ -1,0 +1,2 @@
+D:\Проекты VS\Серверы\ServerTCP\Debug\ServerTCP.exe
+D:\Проекты VS\Серверы\ServerTCP\Debug\ServerTCP.pdb
